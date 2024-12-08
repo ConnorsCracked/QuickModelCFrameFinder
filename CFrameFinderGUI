@@ -1,0 +1,165 @@
+-- Function to create the GUI with a search box and a display for the model's CFrame
+local function createSearchAndCFrameDisplay()
+    -- Create the ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    screenGui.ResetOnSpawn = false -- Prevent the GUI from disappearing when the player dies
+
+    -- Create the Frame to hold the elements
+    local frame = Instance.new("Frame")
+    frame.Parent = screenGui
+    frame.Size = UDim2.new(0, 400, 0, 220)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5) -- Anchor the frame's center
+    frame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Start at the center
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.Active = true -- Enable frame to receive input for dragging
+    frame.Draggable = true -- Make the frame draggable
+
+    -- Create the Title Label
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Parent = frame
+    titleLabel.Size = UDim2.new(1, -20, 0, 30)
+    titleLabel.Position = UDim2.new(0, 10, 0, 10)
+    titleLabel.Text = "Quick CFrame Position Finder"
+    titleLabel.TextSize = 20
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.BackgroundTransparency = 1
+
+    -- Create the Search Box
+    local searchBox = Instance.new("TextBox")
+    searchBox.Parent = frame
+    searchBox.Size = UDim2.new(1, -20, 0, 30)
+    searchBox.Position = UDim2.new(0, 10, 0, 50)
+    searchBox.Text = "" -- Start with empty text
+    searchBox.PlaceholderText = "Enter model name here..." -- Built-in placeholder text
+    searchBox.TextSize = 18
+    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    searchBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    searchBox.ClearTextOnFocus = false -- Keep the placeholder behavior
+
+    -- Create the TextBox for displaying the CFrame
+    local cframeBox = Instance.new("TextBox")
+    cframeBox.Parent = frame
+    cframeBox.Size = UDim2.new(0, 0, 0, 50) -- Size will adjust dynamically
+    cframeBox.Position = UDim2.new(0.5, 0, 0, 90)
+    cframeBox.AnchorPoint = Vector2.new(0.5, 0)
+    cframeBox.Text = ""
+    cframeBox.TextSize = 18
+    cframeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    cframeBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    cframeBox.ClearTextOnFocus = false
+    cframeBox.TextEditable = true
+
+    -- Create the Buttons Container
+    local buttonsFrame = Instance.new("Frame")
+    buttonsFrame.Parent = frame
+    buttonsFrame.Size = UDim2.new(1, -20, 0, 30)
+    buttonsFrame.Position = UDim2.new(0, 10, 1, -50)
+    buttonsFrame.BackgroundTransparency = 1
+
+    -- Helper function to create a button
+    local function createButton(parent, text, position)
+        local button = Instance.new("TextButton")
+        button.Parent = parent
+        button.Size = UDim2.new(0.3, -5, 1, 0) -- Each button takes up 30% of the container width, with spacing
+        button.Position = position
+        button.Text = text
+        button.TextSize = 18
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        button.TextScaled = true -- Text scales to fit the button
+        button.TextWrapped = true -- Wrap text if it overflows
+        return button
+    end
+
+    -- Create the Close Button
+    local closeButton = createButton(buttonsFrame, "Close", UDim2.new(0, 0, 0, 0))
+
+    -- Create the Realign Button
+    local realignButton = createButton(buttonsFrame, "Realign", UDim2.new(0.35, 0, 0, 0))
+
+    -- Create the Get Character Position Button
+    local getCharPositionButton = createButton(buttonsFrame, "Get Char Pos", UDim2.new(0.7, 0, 0, 0))
+
+    -- Function to update the CFrame display
+    local function updateCFrameBox(cframeText)
+        -- Update the text
+        cframeBox.Text = cframeText
+
+        -- Resize the TextBox and Frame dynamically
+        local textWidth = cframeBox.TextBounds.X + 10 -- Adding some padding
+        cframeBox.Size = UDim2.new(0, textWidth, 0, 50)
+        frame.Size = UDim2.new(0, math.max(textWidth + 20, 400), 0, frame.Size.Y.Offset)
+    end
+
+    -- Function to find the model by name and display its CFrame
+    local function findModelAndDisplayCFrame(modelName)
+        local model = workspace:FindFirstChild(modelName, true) -- Search recursively
+        if model and model:IsA("Model") then
+            -- Calculate the center of the model by averaging part positions
+            local totalPosition = Vector3.new(0, 0, 0)
+            local totalParts = 0
+
+            for _, part in pairs(model:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    totalPosition = totalPosition + part.Position
+                    totalParts = totalParts + 1
+                end
+            end
+
+            if totalParts > 0 then
+                local modelCenter = totalPosition / totalParts
+                local modelCFrame = CFrame.new(modelCenter)
+                updateCFrameBox(tostring(modelCFrame.Position)) -- Show only the position
+            else
+                updateCFrameBox("Model has no parts.")
+            end
+        else
+            updateCFrameBox("Model not found.")
+        end
+    end
+
+    -- Function to get the player's character position
+    local function getCharacterCFrame()
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local charCFrame = character.HumanoidRootPart.CFrame
+            updateCFrameBox(tostring(charCFrame.Position)) -- Show only the position
+        else
+            updateCFrameBox("Character not found.")
+        end
+    end
+
+    -- Connect the Search Box to listen for input
+    searchBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            -- If the search box is empty, reapply the placeholder text
+            if searchBox.Text == "" then
+                searchBox.Text = "" -- Leave empty to trigger placeholder
+            else
+                local modelName = searchBox.Text
+                findModelAndDisplayCFrame(modelName)
+            end
+        end
+    end)
+
+    -- Connect the Close button to remove the GUI
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
+
+    -- Connect the Realign button to recenter the frame
+    realignButton.MouseButton1Click:Connect(function()
+        frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    end)
+
+    -- Connect the Get Character Position button
+    getCharPositionButton.MouseButton1Click:Connect(function()
+        getCharacterCFrame()
+    end)
+end
+
+-- Create the GUI when the script runs
+createSearchAndCFrameDisplay()
